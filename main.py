@@ -7,7 +7,8 @@ import shutil
 from openai import OpenAI
 import json
 import os
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 import datetime
 import models, database, auth
 import school_auth
@@ -24,7 +25,7 @@ app = FastAPI()
 # Configure CORS for frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:3001"],
+    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://localhost:3001", "http://127.0.0.1:5173", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -152,11 +153,12 @@ class QuizSubmitRequest(BaseModel):
 
 # --- Helpers ---
 
-def get_gemini_model(api_key: str, model_name: str = "gemini-3-flash-preview"):
-    # Ensure the model name is clean and points to a valid model identifier
-    model_name = model_name.replace("models/", "")
-    genai.configure(api_key=api_key)
-    return genai.GenerativeModel(model_name)
+def get_gemini_client(api_key: str):
+    return genai.Client(api_key=api_key)
+
+def get_gemini_model_name(model_name: str = "gemini-3-flash-preview"):
+    # Clean the model name
+    return model_name.replace("models/", "")
 
 def get_openrouter_client(api_key: str):
     return OpenAI(
@@ -278,14 +280,13 @@ def build_quiz_prompt(topic: str, quiz_format: str, num_questions: int, difficul
     """
 
 async def generate_quiz_questions_ai(prompt: str, api_key: str) -> List[Dict[str, Any]]:
-    model = get_gemini_model(api_key)
+    client = get_gemini_client(api_key)
     content = ""
     try:
-        response = model.generate_content(
-            prompt,
-            generation_config=genai.types.GenerationConfig(
-                candidate_count=1,
-                stop_sequences=["```"],
+        response = client.models.generate_content(
+            model=get_gemini_model_name(),
+            contents=prompt,
+            config=types.GenerateContentConfig(
                 temperature=0.7,
             )
         )
@@ -313,7 +314,7 @@ async def evaluate_submission_ai(questions: List[Dict], answers: Dict[str, str],
     if not api_key:
         return {"score": "0/0", "results": []}
 
-    model = get_gemini_model(api_key)
+    client = get_gemini_client(api_key)
     
     # improved prompt for partial credit and theory evaluation
     prompt = f"""
@@ -352,7 +353,10 @@ async def evaluate_submission_ai(questions: List[Dict], answers: Dict[str, str],
     """
     
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=get_gemini_model_name(),
+            contents=prompt
+        )
         content = response.text
         cleaned_json = clean_json_text(content)
         evaluation = json.loads(cleaned_json)
@@ -406,7 +410,7 @@ def generate_quiz(req: GenerateQuizRequest, user_id: str = Depends(auth.get_curr
     if not user or not user.google_api_key:
         raise HTTPException(status_code=400, detail="Google API Key not set. Please go to settings.")
 
-    model = get_gemini_model(user.google_api_key)
+    client = get_gemini_client(user.google_api_key)
 
     # Prompt construction based on format
     options_instruction = ""
@@ -450,7 +454,10 @@ def generate_quiz(req: GenerateQuizRequest, user_id: str = Depends(auth.get_curr
     print(f"Generating quiz with prompt: {prompt}") # Debug
 
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=get_gemini_model_name(),
+            contents=prompt
+        )
         text = clean_json_text(response.text)
         quiz_json = json.loads(text)
         
@@ -565,8 +572,10 @@ async def generate_quiz_from_doc(
     db.commit() 
     db.refresh(new_doc)
 
+    # Save to DB (new_doc already saved above)
+
     # Generate Quiz with context
-    model = get_gemini_model(user.google_api_key)
+    client = get_gemini_client(user.google_api_key)
 
     options_instruction = ""
     if format == "objective":
@@ -625,7 +634,10 @@ async def generate_quiz_from_doc(
     """
     
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=get_gemini_model_name(),
+            contents=prompt
+        )
         text = clean_json_text(response.text)
         quiz_json = json.loads(text)
         
@@ -675,7 +687,7 @@ def generate_quiz_from_existing_doc(req: GenerateQuizFromExistingRequest, user_i
 
     context_text = doc.content # Already parsed markdown
 
-    model = get_gemini_model(user.google_api_key)
+    client = get_gemini_client(user.google_api_key)
 
     options_instruction = ""
     if req.format == "objective":
@@ -734,7 +746,10 @@ def generate_quiz_from_existing_doc(req: GenerateQuizFromExistingRequest, user_i
     """
     
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=get_gemini_model_name(),
+            contents=prompt
+        )
         text = clean_json_text(response.text)
         quiz_json = json.loads(text)
         
@@ -775,7 +790,7 @@ def submit_quiz(submission: Dict[str, Any], user_id: str = Depends(auth.get_curr
     if not user or not user.google_api_key:
         raise HTTPException(status_code=400, detail="API Key missing")
 
-    model = get_gemini_model(user.google_api_key)
+    client = get_gemini_client(user.google_api_key)
 
     submission_str = json.dumps(submission, indent=2)
 
@@ -803,7 +818,10 @@ def submit_quiz(submission: Dict[str, Any], user_id: str = Depends(auth.get_curr
     """
 
     try:
-        response = model.generate_content(prompt)
+        response = client.models.generate_content(
+            model=get_gemini_model_name(),
+            contents=prompt
+        )
         raw_text = response.text
         print(f"DEBUG - Raw AI Response: {raw_text}") 
         
@@ -1933,8 +1951,11 @@ def generate_student_quiz(
     """
 
     try:
-        model = get_gemini_model(req.api_key)
-        response = model.generate_content(prompt)
+        client = get_gemini_client(req.api_key)
+        response = client.models.generate_content(
+            model=get_gemini_model_name(),
+            contents=prompt
+        )
         
         raw_text = response.text
         print(f"DEBUG RAW AI: {raw_text}") # Debug AI response
@@ -2039,7 +2060,8 @@ def submit_student_quiz(
     else:
         # AI EVALUATION for theory/subjective
         try:
-            model = get_gemini_model(req.api_key)
+            client = get_gemini_client(req.api_key)
+            
             submission_str = json.dumps(req.answers, indent=2)
             questions_str = json.dumps(questions, indent=2)
             
@@ -2083,7 +2105,10 @@ def submit_student_quiz(
             }}
             """
             
-            response = model.generate_content(prompt)
+            response = client.models.generate_content(
+                model=get_gemini_model_name(),
+                contents=prompt
+            )
             raw_text = response.text
             text = clean_json_text(raw_text)
             evaluation = json.loads(text)
@@ -2271,8 +2296,11 @@ def get_student_analysis(
     """
     
     try:
-        model = get_gemini_model(student.google_api_key)
-        response = model.generate_content(prompt)
+        client = get_gemini_client(student.google_api_key)
+        response = client.models.generate_content(
+            model=get_gemini_model_name(),
+            contents=prompt
+        )
         
         raw_text = response.text
         text = clean_json_text(raw_text)
