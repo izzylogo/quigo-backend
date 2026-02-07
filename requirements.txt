@@ -1,0 +1,16 @@
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+python-dotenv
+openai
+pyjwt
+cryptography
+requests
+python-multipart
+bcrypt
+google-generativeai
+llama-parse
+nest-asyncio
+gunicorn
+psycopg2-binary

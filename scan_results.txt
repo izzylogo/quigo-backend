@@ -1,0 +1,18 @@
+
+=== quizv2.db ===
+Schools (1):
+  - Name: snow field academy, Email: snowfield@gmail.com (Password is Hashed)
+Students (7):
+  - Name: james brown, Email: james@gmail.com, StudentID: STU-2026-001-00001, Password: WeNU1H4b
+  - Name: kenneth jude, Email: kenneth@gmail.com, StudentID: STU-2026-001-00002, Password: MV5qnxZG
+  - Name: timothy smith, Email: tim@gmail.com, StudentID: STU-2026-001-00003, Password: 6U79lQlB
+  - Name: samson deli, Email: samson@gmail.com, StudentID: STU-2026-001-00004, Password: NiGsgwvq
+  - Name: josh woods, Email: josh@gmail.com, StudentID: STU-2026-001-00005, Password: dYv8eb3X
+  - Name: grace polar, Email: gracep@gmail.com, StudentID: STU-2026-001-00006, Password: wnIlk3eY
+  - Name: precious coco, Email: preco@gmail.com, StudentID: STU-2026-001-00007, Password: KxzrUZZQ
+Individuals (1):
+  - Name: Omitiran Israel Oluwasemilogo, Email: omiti@gmail.com (Password is Hashed)
+
+=== quigo.db ===
+
+=== sql_app.db ===
