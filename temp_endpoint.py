@@ -64,7 +64,7 @@ def generate_student_quiz(
         combined_context += f"\n\nADDITIONAL NOTES FROM TEACHER:\n{quiz.additional_notes}"
     
     prompt = f"""
-    Generate a quiz about "{quiz.topic}" based on the following DOCUMENT CONTEXT.
+    Generate a high-fidelity, concept-focused assessment about "{quiz.topic}" based on the following DOCUMENT CONTEXT.
     
     DOCUMENT CONTEXT:
     {combined_context}
@@ -99,7 +99,7 @@ def generate_student_quiz(
     - {options_instruction}
     - answer field MUST always be an empty string (student will fill it).
     - ensure unique IDs for questions (1, 2, 3...)
-    - NEGATIVE CONSTRAINTS: Do NOT ask about author, publication date, or document structure.
+    - NEGATIVE CONSTRAINTS: Do NOT ask about authors, publication dates, publishers, journals, or document structure. Focus ONLY on the SUBJECT MATTER and CONTENT of the document. Avoid administrative metadata.
     """
     
     try:

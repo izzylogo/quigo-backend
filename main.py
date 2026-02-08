@@ -258,7 +258,7 @@ def build_quiz_prompt(topic: str, quiz_format: str, num_questions: int, difficul
         options_instruction = "options MUST be null."
 
     return f"""
-    Generate a quiz about "{topic}".
+    Generate a high-quality assessment about "{topic}".
     Format: {quiz_format}
     Difficulty: {difficulty}
     Number of questions: {num_questions}
@@ -285,6 +285,8 @@ def build_quiz_prompt(topic: str, quiz_format: str, num_questions: int, difficul
     - correct_answer field MUST be the actual correct answer (key or text).
     - For multiple choice, randomize correct answer position.
     - Provide clear and concise questions.
+    - CRITICAL: Focus on ACTUAL CONTENT and CONCEPTS.
+    - NEGATIVE CONSTRAINTS: Do NOT ask about the author, publication date, document metadata, IEEE membership, or administrative details.
     - CRITICAL: ESCAPE all double quotes (") inside question strings with a backslash (\") or use single quotes instead.
     - CRITICAL: Ensure the JSON is valid and not truncated.
     """
@@ -429,10 +431,20 @@ def generate_quiz(req: GenerateQuizRequest, user_id: str = Depends(auth.get_curr
     elif req.format in ["theory", "fill_in_the_blank"]:
         options_instruction = "options MUST be null."
 
+    # Difficulty Logic
+    difficulty_instruction = ""
+    if req.difficulty.lower() == "easy":
+        difficulty_instruction = "Focus on high-level definitions and key terms. Keep questions simple and direct."
+    elif req.difficulty.lower() == "medium":
+        difficulty_instruction = "Focus on core concepts, relationships, and practical applications."
+    elif req.difficulty.lower() == "hard":
+        difficulty_instruction = "Focus on critical analysis, logical inferences, and complex problem-solving. Avoid surface-level facts. Ask 'why' and 'how' questions that probe deep understanding."
+
     prompt = f"""
-    Generate a quiz about "{req.topic}".
+    Generate a high-fidelity assessment about "{req.topic}".
     Format: {req.format}
     Difficulty: {req.difficulty}
+    {difficulty_instruction}
     Number of questions: {req.num_questions}
     Custom Instructions: {req.custom_instructions or "None"}
     
@@ -458,7 +470,8 @@ def generate_quiz(req: GenerateQuizRequest, user_id: str = Depends(auth.get_curr
     - Randomize the position of the correct answer (A, B, C, D). Do NOT default to 'B', 'C', or 'D'.
     - Ask and generate questions from random parts.
     - ensure unique IDs for questions (1, 2, 3...)
-    - Focus ONLY on the SUBJECT MATTER and CONTENT of the document.
+    - Focus ONLY on the SUBJECT MATTER and CONTENT.
+    - NEGATIVE CONSTRAINTS: Do NOT ask about authors, publication dates, publishers, or document metadata (e.g., 'Who is the corresponding author?', 'What is the date of publication?'). These are NOT reasonable questions. Focus on concepts, logic, and core information.
     """
     
     print(f"Generating quiz with prompt: {prompt}") # Debug
@@ -603,7 +616,7 @@ async def generate_quiz_from_doc(
         difficulty_instruction = "Focus on subtle details, logical inferences, and complex scenarios found deep in the text. Ignore obvious surface-level facts. Ask 'why' and 'how'."
 
     prompt = f"""
-    Generate a quiz about "{topic}" based on the following DOCUMENT CONTEXT.
+    Generate a high-fidelity, concept-focused assessment about "{topic}" based on the following DOCUMENT CONTEXT.
     
     DOCUMENT CONTEXT:
     {context_text}
@@ -633,14 +646,14 @@ async def generate_quiz_from_doc(
     
     Rules:
     - Questions MUST be answered using the provided context.
-    - Randomize the position of the correct answer (A, B, C, D). Do NOT default to 'B', 'C', or 'D'. Randomize the position of the correct answer (A, B, C, D).
+    - Randomize the position of the correct answer (A, B, C, D).
     - Ask and generate questions from random parts of the document, do not ask questions from starting to ending - you can start asking questions from the middle of the pdf and also from bullet points mentioned in the document.
     - {difficulty_instruction}
     - ENSURE questions are distributed across the ENTIRE text provided.
     - {options_instruction}
     - answer field MUST always be an empty string string (user will fill it).
     - ensure unique IDs for questions (1, 2, 3...)
-    - NEGATIVE CONSTRAINTS: Do NOT ask about the author, publication date, or document structure (e.g., 'what is after chapter 1', 'what is the matriculation number'). Focus ONLY on the SUBJECT MATTER and CONTENT of the document.
+    - NEGATIVE CONSTRAINTS: Do NOT ask about authors, publication dates, publishers, journals, or document structure (e.g., 'Who is the corresponding author?', 'Date of current version', 'what is after chapter 1'). These are NOT reasonable questions for understanding. Focus ONLY on the SUBJECT MATTER and CONTENT of the document.
     """
     
     try:
@@ -715,7 +728,7 @@ def generate_quiz_from_existing_doc(req: GenerateQuizFromExistingRequest, user_i
         difficulty_instruction = "Focus on subtle details, logical inferences, and complex scenarios found deep in the text. Ignore obvious surface-level facts. Ask 'why' and 'how'."
 
     prompt = f"""
-    Generate a quiz about "{req.topic}" based on the following DOCUMENT CONTEXT.
+    Generate a high-fidelity, concept-focused assessment about "{req.topic}" based on the following DOCUMENT CONTEXT.
     
     DOCUMENT CONTEXT:
     {context_text}
@@ -752,7 +765,7 @@ def generate_quiz_from_existing_doc(req: GenerateQuizFromExistingRequest, user_i
     - {options_instruction}
     - answer field MUST always be an empty string string (user will fill it).
     - ensure unique IDs for questions (1, 2, 3...)
-    - NEGATIVE CONSTRAINTS: Do NOT ask about the author, publication date, or document structure (e.g., 'what is after chapter 1', 'what is the matriculation number'). Focus ONLY on the SUBJECT MATTER and CONTENT of the document.
+    - NEGATIVE CONSTRAINTS: Do NOT ask about authors, publication dates, publishers, journals, or document structure (e.g., 'corresponding author', 'Date of publication', 'matriculation number'). Focus ONLY on the SUBJECT MATTER and CONTENT of the document.
     """
     
     try:
