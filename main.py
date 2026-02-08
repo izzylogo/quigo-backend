@@ -44,6 +44,10 @@ async def validation_exception_handler(request, exc):
         content={"detail": exc.errors(), "body": str(exc)},
     )
 
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "Quigo Backend Running"}
+
 # --- Pydantic Schemas ---
 
 class UserSettings(BaseModel):
