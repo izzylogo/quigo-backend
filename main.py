@@ -1611,7 +1611,7 @@ async def create_school_quiz(
             
             # Save document to database
             new_doc = models.Document(
-                user_id=f"school_{school_id}",
+                user_id=None,  # School documents don't belong to individual users
                 filename=file.filename,
                 content=context_text
             )
