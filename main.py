@@ -1011,6 +1011,52 @@ def list_schools(db: Session = Depends(database.get_db)):
         for s in schools
     ]
 
+@app.get("/api/students/list")
+def list_all_students(db: Session = Depends(database.get_db)):
+    """List all students grouped by school and classroom for demo/pre-login selection."""
+    schools = db.query(models.School).all()
+    result = []
+    
+    for school in schools:
+        school_data = {
+            "id": school.id,
+            "name": school.name,
+            "classrooms": []
+        }
+        
+        # Get all classrooms for this school
+        classrooms = db.query(models.Classroom).filter(
+            models.Classroom.school_id == school.id
+        ).all()
+        
+        for classroom in classrooms:
+            # Get all students in this classroom
+            students = db.query(models.Student).filter(
+                models.Student.classroom_id == classroom.id
+            ).all()
+            
+            if students:  # Only include classrooms with students
+                classroom_data = {
+                    "id": classroom.id,
+                    "name": classroom.name,
+                    "grade_level": classroom.grade_level,
+                    "students": [
+                        {
+                            "id": s.id,
+                            "name": s.name,
+                            "student_id": s.student_id,
+                            "password": s.password  # Plain text password for demo
+                        }
+                        for s in students
+                    ]
+                }
+                school_data["classrooms"].append(classroom_data)
+        
+        if school_data["classrooms"]:  # Only include schools with students
+            result.append(school_data)
+    
+    return result
+
 # --- Individual Authentication Endpoints ---
 
 @app.post("/api/individual/register")
