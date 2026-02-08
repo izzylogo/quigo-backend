@@ -17,8 +17,14 @@ import re
 from education_systems import EDUCATION_SYSTEMS, get_available_countries, get_education_levels
 from credential_generator import generate_student_id, generate_password, generate_simple_password
 
-# Create Database Tables
 models.Base.metadata.create_all(bind=database.engine)
+
+# DEBUG: Print environment info
+import os
+import sys
+print(f"DEBUG: STARTING APP", flush=True)
+print(f"DEBUG: PORT env var: {os.environ.get('PORT')}", flush=True)
+print(f"DEBUG: Current working directory: {os.getcwd()}", flush=True)
 
 app = FastAPI()
 
